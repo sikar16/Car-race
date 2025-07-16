@@ -7,8 +7,9 @@ import Signup from './page/Signup';
 function App() {
   return (
     <Router>
-      <div className='flex flex-col items-center justify-center h-screen bg-yellow-500'>
+      <div className='flex flex-col items-center justify-center h-screen'>
         <Routes>
+          <Route path="/" element={<Login />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
         </Routes>
