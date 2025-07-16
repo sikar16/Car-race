@@ -38,7 +38,7 @@ function LoginForm() {
 
                     <div className="text-center mt-4 text-gray-700">
                         <p>Dont have account?&nbsp;
-                            <a href="#" className="text-sm text-black hover:underline">Signup</a>
+                            <a href="/signup" className="text-sm text-black hover:underline">Signup</a>
                         </p>
                     </div>
                 </form>
