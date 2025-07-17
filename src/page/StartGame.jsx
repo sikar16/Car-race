@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaTrophy, FaRedo, FaListUl, FaStar } from 'react-icons/fa';
+import { CgEnter } from 'react-icons/cg';
 
 const GAME_WIDTH = 900;
 const GAME_HEIGHT = 600;
@@ -152,14 +153,8 @@ for (let op of updated) {
   ) {
     lastCollisionTime.current = now; 
 
-    setLives((prevLives) => {
-      if (prevLives <= 1) {
-        setGameOver(true);
-        setPlayer((p) => ({ ...p, isStart: false, speed: 5 }));
-        return 0;
-      }
-      return prevLives - 1;
-    });
+    setGameOver(true);
+    setPlayer((p) => ({ ...p, isStart: false, speed: 5 }));
 
     break; 
   }
@@ -244,20 +239,25 @@ const isColliding = (player, star) => {
 
 
 
-    const startGame = () => {
-        setPlayer({
-            x: GAME_WIDTH / 2 - CAR_WIDTH / 2,
-            y: GAME_HEIGHT - CAR_HEIGHT - 10,
-            speed: 5,
-            score: 0,
-            highScore: player.highScore,
-            isStart: true,
-        });
-        setGameOver(false);
-          setStarCount(0);  
-  setLives(3); 
-    };
+   const startGame = () => {
+  if (lives <= 0) return; // Don't start if no lives left
+
+  setPlayer({
+    x: GAME_WIDTH / 2 - CAR_WIDTH / 2,
+    y: GAME_HEIGHT - CAR_HEIGHT - 10,
+    speed: 5,
+    score: 0,
+    highScore: player.highScore,
+    isStart: true,
+  });
+
+  setGameOver(false);
+  setLives((prev) => prev - 1); // ✅ Reduce life on restart
+  collectedStarIds.current.clear(); // ✅ Reset star ID tracking only
+};
+
    
+    
 
 useEffect(() => {
   const interval = setInterval(() => {
@@ -456,27 +456,63 @@ useEffect(() => {
    
     <p style={{ display: 'flex',alignItems: 'center',justifyContent:'center', margin:'auto'}}><FaTrophy style={{  color: 'gold' }} />&nbsp;Your score: <strong>{player.score} </strong><span>&nbsp;&nbsp;⭐</span> <span>{starsCollected}</span></p>
                                </div>
-                            <button
-                                onClick={startGame}
-                                style={{
-                                    marginTop: 8,
-                                    marginRight: 16,
-                                    padding: '12px 32px',
-                                    fontSize: 22,
-                                    borderRadius: 12,
-                                    border: 'none',
-                                    background: '#6366f1',
-                                    color: 'white',
-                                    fontWeight: 600,
-                                    cursor: 'pointer',
-                                    boxShadow: '0 2px 8px #6366f188',
-                                    transition: 'background 0.2s',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                }}
-                            >
-                                <FaRedo style={{ marginRight: 8 }} />Restart
-                            </button>
+                         
+{lives > 0 ? (
+  <button
+    onClick={startGame}
+    style={{
+      margin:'auto',     
+       padding: '12px 32px',
+      fontSize: 22,
+      borderRadius: 12,
+      border: 'none',
+      background: '#6366f1',
+      color: 'white',
+      fontWeight: 600,
+      cursor: 'pointer',
+      boxShadow: '0 2px 8px #6366f188',
+      transition: 'background 0.2s',
+      display: 'inline-flex',
+      alignItems: 'center',
+      width: '300px',
+    }}
+  >
+    
+    Continue (Lives left: {lives})
+  </button>
+) : (
+  <div style={{ color: 'red', fontSize: 18, marginTop: 16 }}>
+    No lives remaining. 
+  </div>
+)}
+
+
+
+
+  <button
+    onClick={() => window.location.reload()}
+    style={{
+       margin:'15px auto',     
+       padding: '12px 32px',
+      fontSize: 22,
+      borderRadius: 12,
+      border: 'none',
+      background: '#6366f1',
+      color: 'white',
+      fontWeight: 600,
+      cursor: 'pointer',
+      boxShadow: '0 2px 8px #6366f188',
+      transition: 'background 0.2s',
+      display: 'inline-flex',
+      alignItems: 'center',
+      width: '300px',
+    }}
+  >
+    <FaRedo style={{ marginRight: 8 }} /> Start New Game
+  </button>
+
+
+                           
                             <button
                                 onClick={() => navigate('/scorelist')}
                                 style={{
@@ -492,10 +528,11 @@ useEffect(() => {
                                     boxShadow: '0 2px 8px #facc1588',
                                     display: 'inline-flex',
                                     alignItems: 'center',
+                                    width: '300px',
                                 }}
                             >
                                 <FaListUl style={{ marginRight: 8 }} />View Score List
-                            </button>
+                          </button>
                         </div>
                     )}
                     {!player.isStart && !gameOver && (
