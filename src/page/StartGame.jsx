@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaTrophy, FaRedo, FaListUl } from 'react-icons/fa';
+import { FaTrophy, FaRedo, FaListUl, FaStar } from 'react-icons/fa';
 
 const GAME_WIDTH = 900;
 const GAME_HEIGHT = 600;
@@ -18,6 +18,9 @@ function getRandomCarEmoji() {
     return CAR_EMOJIS[Math.floor(Math.random() * CAR_EMOJIS.length)];
 }
 
+
+
+
 const StartGame = () => {
     const navigate = useNavigate();
     const [player, setPlayer] = useState({
@@ -27,7 +30,13 @@ const StartGame = () => {
         score: 0,
         highScore: 0,
         isStart: false,
+        
+
     });
+
+
+   
+
     const [keys, setKeys] = useState({
         ArrowUp: false,
         ArrowDown: false,
@@ -37,10 +46,24 @@ const StartGame = () => {
     const [roadLines, setRoadLines] = useState([]);
     const [opponents, setOpponents] = useState([]);
     const [gameOver, setGameOver] = useState(false);
+    const collectedStarIds = useRef(new Set());
+    const lastCollisionTime = useRef(0);
+
+    
+
     const gameAreaRef = useRef();
 
     const playerRef = useRef(player);
     const opponentsRef = useRef(opponents);
+const [starsCollected, setStarCount] = useState(0);
+  const [lives, setLives] = useState(3);
+  
+    const [stars, setStars] = useState([
+  { id: 1, x: 300, y: 200 },
+  { id: 2, x: 600, y: 350 },
+  { id: 3, x: 900, y: 150 },
+]); 
+
 
     useEffect(() => { playerRef.current = player; }, [player]);
     useEffect(() => { opponentsRef.current = opponents; }, [opponents]);
@@ -116,22 +139,77 @@ const StartGame = () => {
                     }
                     return { ...op, y, x, carEmoji };
                 });
-                const p = playerRef.current;
-                for (let op of updated) {
-                    if (
-                        p.x < op.x + OPPONENT_WIDTH &&
-                        p.x + CAR_WIDTH > op.x &&
-                        p.y < op.y + OPPONENT_HEIGHT &&
-                        p.y + CAR_HEIGHT > op.y
-                    ) {
-                        setGameOver(true);
-                        setPlayer((p) => ({ ...p, isStart: false, speed: 5 }));
-                        return updated;
-                    }
-                }
+               const now = Date.now();
+const p = playerRef.current;
+
+for (let op of updated) {
+  if (
+    now - lastCollisionTime.current > 1000 && 
+    p.x < op.x + OPPONENT_WIDTH &&
+    p.x + CAR_WIDTH > op.x &&
+    p.y < op.y + OPPONENT_HEIGHT &&
+    p.y + CAR_HEIGHT > op.y
+  ) {
+    lastCollisionTime.current = now; 
+
+    setLives((prevLives) => {
+      if (prevLives <= 1) {
+        setGameOver(true);
+        setPlayer((p) => ({ ...p, isStart: false, speed: 5 }));
+        return 0;
+      }
+      return prevLives - 1;
+    });
+
+    break; 
+  }
+}
+
                 return updated;
             });
-            setPlayer((prev) => {
+ 
+            
+
+setStars((prevStars) => {
+  const updated = prevStars
+    .map((star) => ({
+      ...star,
+      y: star.y + playerRef.current.speed,
+    }))
+    .filter((star) => star.y < GAME_HEIGHT + 50);
+
+  const newlyCollected = [];
+  const remaining = [];
+
+  for (const star of updated) {
+    const alreadyCollected = collectedStarIds.current.has(star.id);
+    if (isColliding(playerRef.current, star) && !alreadyCollected) {
+      collectedStarIds.current.add(star.id); 
+      newlyCollected.push(star);
+    } else {
+      remaining.push(star);
+    }
+  }
+
+  if (newlyCollected.length > 0) {
+    setPlayer((prev) => {
+      const newScore = prev.score + newlyCollected.length * 10;
+      const newHigh = Math.max(prev.highScore, newScore);
+      return {
+        ...prev,
+        score: newScore,
+        highScore: newHigh,
+      };
+    });
+
+    setStarCount((prev) => prev + newlyCollected.length);
+  }
+
+  return remaining;
+});
+
+
+ setPlayer((prev) => {
                 let newScore = prev.score + 1;
                 let newHigh = prev.highScore;
                 if (newScore > prev.highScore) newHigh = newScore;
@@ -143,14 +221,28 @@ const StartGame = () => {
         return () => cancelAnimationFrame(animationId);
     }, [player.isStart, gameOver, keys]);
 
-    useEffect(() => {
-        if (gameOver && player.score > 0) {
-            const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
-            const scores = JSON.parse(localStorage.getItem('scores') || '[]');
-            scores.push({ email: user.email || 'Guest', score: player.score });
-            localStorage.setItem('scores', JSON.stringify(scores));
-        }
-    }, [gameOver, player.score]);
+  useEffect(() => {
+    if (gameOver && player.score > 0) {
+      
+
+        const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        const scores = JSON.parse(localStorage.getItem('scores') || '[]');
+        scores.push({ email: user.email || 'Guest', score: player.score });
+        localStorage.setItem('scores', JSON.stringify(scores));
+    } 
+}, [gameOver, player.score]);
+const isColliding = (player, star) => {
+  return (
+    player.x < star.x + 24 &&
+    player.x + CAR_WIDTH > star.x &&
+    player.y < star.y + 24 &&
+    player.y + CAR_HEIGHT > star.y
+  );
+};
+
+
+
+
 
     const startGame = () => {
         setPlayer({
@@ -162,7 +254,26 @@ const StartGame = () => {
             isStart: true,
         });
         setGameOver(false);
+          setStarCount(0);  
+  setLives(3); 
     };
+   
+
+useEffect(() => {
+  const interval = setInterval(() => {
+    setStars(prev => [
+      ...prev,
+      {
+        id: Date.now(),
+        x: Math.random() * (GAME_WIDTH - 24),
+        y: -Math.random() * 300 - 50,
+      },
+    ]);
+  }, 5000); 
+
+  return () => clearInterval(interval);
+}, []);
+
 
     return (
         <div style={{
@@ -179,6 +290,21 @@ const StartGame = () => {
             <h1 style={{ fontSize: 40, fontWeight: 700, marginBottom: 24, letterSpacing: 1, color: '#fff', textShadow: '0 2px 8px #0008', zIndex: 10 }}>
                 Car Race Game
             </h1>
+            <div style={{
+  position: 'absolute',
+  top: 10,
+  right: 20,
+  fontSize: '1.5rem',
+  fontWeight: 'bold',
+  color: 'red',
+  display: player.isStart && !gameOver ? 'flex' : 'none',
+  alignItems: 'center',
+  gap: '8px',
+  zIndex: 999
+}}>
+  ❤️ × {lives}
+</div>
+
             <div style={{ display: 'flex', gap: 16, marginBottom: 16, zIndex: 10 }}>
                 <div style={{ background: '#fff', boxShadow: '0 2px 12px #0001', borderRadius: 12, padding: '8px 24px', display: 'flex', alignItems: 'center', fontWeight: 600, fontSize: 20 }}>
                     <FaListUl style={{ marginRight: 8, color: '#6366f1' }} />
@@ -189,6 +315,23 @@ const StartGame = () => {
                     <span>High: {player.highScore}</span>
                 </div>
             </div>
+            <div
+  style={{
+    position: 'absolute',
+    top: 10,
+    left: 20,
+    fontSize: '1.5rem',
+    fontWeight: 'bold',
+    color: 'gold',
+    display: player.isStart && !gameOver ? 'flex' : 'none',
+    alignItems: 'center',
+    gap: '8px',
+    zIndex: 999
+  }}
+>
+  <span>⭐</span> <span>{starsCollected}</span>
+</div>
+
             <div style={{
                 position: 'relative',
                 width: GAME_WIDTH,
@@ -250,7 +393,23 @@ const StartGame = () => {
                         >
                             {op.carEmoji}
                         </div>
+                        
+
                     ))}
+                    {stars.map(star => (
+                  <FaStar
+                key={star.id}
+    style={{
+      position: 'absolute',
+      top: `${star.y}px`,
+      left: `${star.x}px`,
+      color: 'yellow',
+      fontSize: '24px',
+      zIndex: 10,
+    }}
+  />
+))}
+
                     {player.isStart && !gameOver && (
                         <div
                             style={{
@@ -292,7 +451,11 @@ const StartGame = () => {
                             backdropFilter: 'blur(8px)',
                             zIndex: 20,
                         }}>
-                            <div style={{ marginBottom: 16 }}>Game Over!</div>
+                            <div style={{ marginBottom: 16 }}>
+                                Game Over! 
+   
+    <p style={{ display: 'flex',alignItems: 'center',justifyContent:'center', margin:'auto'}}><FaTrophy style={{  color: 'gold' }} />&nbsp;Your score: <strong>{player.score} </strong><span>&nbsp;&nbsp;⭐</span> <span>{starsCollected}</span></p>
+                               </div>
                             <button
                                 onClick={startGame}
                                 style={{
@@ -381,6 +544,10 @@ const StartGame = () => {
                     )}
                 </div>
             </div>
+
+
+
+
         </div>
     );
 };
