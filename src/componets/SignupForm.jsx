@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
-
+import { useNavigate } from 'react-router-dom';
 
 
 const SignupForm = () => {
@@ -11,8 +11,9 @@ const SignupForm = () => {
     email: "",
     password: "",
   });
-  
- const [showPassword, setShowPassword] = useState(false);
+
+  const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -24,14 +25,25 @@ const SignupForm = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Form Submitted:", form);
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const userExists = users.some(user => user.email === form.email);
+    if (userExists) {
+      alert('Email already registered!');
+      return;
+    }
+    users.push(form);
+    localStorage.setItem('users', JSON.stringify(users));
+    alert('Signup successful! You can now play the game.');
+    setForm({ fname: '', lname: '', email: '', password: '' });
+    localStorage.setItem('currentUser', JSON.stringify(form));
+    navigate('/startgame');
   };
 
   return (
-    <div className="p-5 w-[400px] flex items-center rounded-lg justify-center  shadow-xl  min-w-1700px min-h-500px ">
+    <div className="min-h-screen flex items-center justify-center ">
       <form
         onSubmit={handleSubmit}
-        className="bg-white p-8 rounded-lg  w-full"
+        className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md"
       >
         <h2 className="text-2xl font-bold mb-6 text-center">Sign Up</h2>
 
@@ -73,17 +85,20 @@ const SignupForm = () => {
 
         <div className="mb-6">
           <label className="block text-sm font-medium">Password</label>
-          <input
-            type="password"
-            name="password"
-            value={form.password}
-            onChange={handleChange}
-            className="w-full mt-1 p-2 border rounded-md focus:outline-none focus:ring focus:border-blue-300"
-            required
-          />
-          <span onClick={togglePassword} className="absolute right-3 top-9 text-gray-600 cursor-pointer">
-            <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
-             </span>
+          <div className='flex gap-3'>
+            <input
+              type="password"
+              name="password"
+              value={form.password}
+              onChange={handleChange}
+              className="w-full mt-1 p-2 border rounded-md focus:outline-none focus:ring focus:border-blue-300"
+              required
+            />
+            <span onClick={togglePassword} className="relative  top-3 text-gray-600 cursor-pointer">
+              <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
+            </span>
+          </div>
+
 
         </div>
 
@@ -93,6 +108,12 @@ const SignupForm = () => {
         >
           Create Account
         </button>
+
+        <div className="text-center mt-4 text-gray-700">
+          <p>Aready have an account? &nbsp;
+            <a href="/login" className="text-sm text-black hover:underline">Login</a>
+          </p>
+        </div>
       </form>
     </div>
   );
